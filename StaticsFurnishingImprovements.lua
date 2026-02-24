@@ -1,7 +1,7 @@
 --[[------------------------------------------------------------------------------------------------
 Title:					Static's Furnishing Improvements
 Author:					Static_Recharge
-Version:			  0.0.1
+Version:			  0.0.2
 Description:		Adds functionality to the in game furnishing menus and placement UI
 ------------------------------------------------------------------------------------------------]]--
 
@@ -30,7 +30,7 @@ Description:	Initializes all of the variables, object managers, slash commands a
 function FI:Initialize()
 	-- Static definitions
   self.addonName = "StaticsFurnishingImprovements"
-	self.addonVersion = "0.0.1"
+	self.addonVersion = "0.0.2"
 	self.author = "|CFF0000Static_Recharge|r"
 	self.varsVersion = 1
 	
@@ -39,7 +39,10 @@ function FI:Initialize()
 	-- Saved variables initialization
 	--self.SV = ZO_SavedVars:NewAccountWide("StaticsFurnishingImprovementsWideVars", self.varsVersion, nil, self.Defaults, nil)
 
-	-- Child Initilization
+	-- Child 
+	
+	-- Hooks
+	self:KeybindStripAdd()
 	
 	-- Event Registrations and Callbacks
   self:HousingEditorHUDUISceneChangeCallback()
@@ -76,24 +79,51 @@ Outputs:			None
 Description:	Deposits already existing stacks into the furnishing vault
 ------------------------------------------------------------------------------------------------]]--
 function FI:DepositSame()
-  local bag, style = BAG_BACKPACK, LINK_STYLE_BRACKETS
-	local slot = ZO_GetNextBagSlotIndex(bag)
-	local Inventory = {}
-	local FurnishingVault = {}
-	while slot do
-		if HasItemInSlot(bag, slot)	and GetItemType(bag, slot) == ITEMTYPE_FURNISHING then
-			table.insert(Inventory, GetItemId(bag, slot))
+  local FurnitureCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_FURNITURE_VAULT)
+	local backpackCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BACKPACK)
+
+	for furnitureIndex, furnitureData in pairs(FurnitureCache) do
+		local furnitureID = GetItemId(BAG_FURNITURE_VAULT, furnitureIndex)
+		for backpackIndex, backpackData in pairs(backpackCache) do
+			local backpackID = GetItemId(BAG_BACKPACK, backpackIndex)
+			if furnitureID == backpackID then
+				if IsProtectedFunction("PickupInventoryItem") then
+					CallSecureProtected("PickupInventoryItem", BAG_BACKPACK, backpackIndex)
+				else
+					PickupInventoryItem(BAG_BACKPACK, backpackIndex)
+				end
+				if IsProtectedFunction("PlaceInTransfer") then
+					CallSecureProtected("PlaceInTransfer")
+				else
+					PlaceInTransfer()
+				end
+			end			
 		end
-		slot = ZO_GetNextBagSlotIndex(bag, slot)
 	end
-	bag = BAG_FURNITURE_VAULT
-	slot = ZO_GetNextBagSlotIndex(bag)
-	while slot do
-		if FurnishingVault[GetItemId(bag, slot)] then
-			-- deposit
-		end
-		slot = ZO_GetNextBagSlotIndex(bag, slot)
-	end
+end
+
+
+--[[------------------------------------------------------------------------------------------------
+FI:KeybindStripAdd()
+Inputs:				None
+Outputs:			None
+Description:	Adds the Deposit Same keybinding to the strip.
+------------------------------------------------------------------------------------------------]]--
+function FI:KeybindStripAdd()
+	local furnitureVaultLeftKeybindStrip = {
+			alignment = KEYBIND_STRIP_ALIGN_LEFT,
+			name = "Deposit Same",
+			keybind = "UI_SHORTCUT_QUINARY",
+			callback = function() self:DepositSame() end,
+		}
+
+	FURNITURE_VAULT_FRAGMENT:RegisterCallback("StateChange", function(oldState, newState)
+    if newState == SCENE_FRAGMENT_SHOWING then
+			KEYBIND_STRIP:AddKeybindButton(furnitureVaultLeftKeybindStrip)
+    elseif newState == SCENE_FRAGMENT_HIDDEN then
+      KEYBIND_STRIP:RemoveKeybindButton(furnitureVaultLeftKeybindStrip)
+    end
+  end)
 end
 
 
