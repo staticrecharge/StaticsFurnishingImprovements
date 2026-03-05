@@ -1,0 +1,9 @@
+HousingEditorRequestRemoveSelectedFurniture()
+
+ZO_HousingFurnitureRetrieveTo_Keyboard --Object
+HousingEditorSetRetrieveToBag(*[Bag|#Bag]* _bagId_)
+HousingEditorGetRetrieveToBag()
+
+HousingEditorGetSelectedFurnitureId()
+/script d(GetFurnitureDataInfo(GetItemLinkFurnitureDataId(GetPlacedFurnitureLink(HousingEditorGetSelectedFurnitureId()))))
+/script d(GetFurnitureCategoryName(104))

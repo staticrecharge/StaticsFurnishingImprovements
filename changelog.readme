@@ -1,2 +1,12 @@
+0.2.0
+  - Made the retrieveto menu show up during more editor scenes
+  - Added a function with keybind/slashcommand to store same items from house to furnishing vault
+  - Added feature to be able to always send craftings stations to the furniture vault when retrieved
+  - Added a settings menu
+  - Added debugging information
+
+0.0.2
+  - Added function to store same items from inventory to the furnishing vault
+
 0.0.1
   - Proof of concept
