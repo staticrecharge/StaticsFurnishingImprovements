@@ -10,7 +10,8 @@ Libraries and Aliases
 ------------------------------------------------------------------------------------------------]]--
 local LAM2 = LibAddonMenu2
 local CM = CALLBACK_MANAGER
-EM = EVENT_MANAGER
+local SM = SCENE_MANAGER
+local EM = EVENT_MANAGER
 
 
 --[[------------------------------------------------------------------------------------------------
@@ -129,6 +130,55 @@ function Settings:CreateSettingsPanel()
     width = "full",
 		default = Parent.Defaults.depositCraftingStations,
 	}
+
+  i = i + 1
+  optionsData[i] = {
+		type = "header",
+		name = "Queue |t100%:100%:esoui/art/buttons/info_up.dds|t",
+    tooltip = "Inventory: |c0086B3Right click|r on furnishing item and select \"Add to Vault Queue\" to add an item.\n\nQueue Window: |c0086B3Right click|r on an item to remove it from the Queue.\n\nItems in the Queue will be automatically deposited to the |c0086B3Furnishing Vault|r on the next visit.",
+	}
+
+  i = i + 1
+	optionsData[i] = {
+		type = "checkbox",
+    name = "Enabled",
+    getFunc = function() return Parent.SV.queueEnabled end,
+    setFunc = function(value) Parent.SV.queueEnabled = value end,
+    tooltip = "If disabled the Queue module will be unloaded.",
+    width = "full",
+		default = Parent.Defaults.queueEnabled,
+	}
+
+  i = i + 1
+	optionsData[i] = {
+		type = "checkbox",
+    name = "Show Queue After Adding",
+    getFunc = function() return Parent.SV.queueShowAfterAdd end,
+    setFunc = function(value) Parent.SV.queueShowAfterAdd = value end,
+    tooltip = "When enabled, the Queue window will be shown when an item is added.",
+    width = "full",
+		default = Parent.Defaults.queueShowAfterAdd,
+    disabled = function() return not Parent.SV.queueEnabled end,
+	}
+
+  i = i + 1
+	optionsData[i] = {
+    type = "button",
+    name = "Show Queue",
+    func = function() SM:ShowBaseScene() Parent.Queue:ShowPanel(true) end,
+    width = "half",
+    disabled = function() return not Parent.SV.queueEnabled end,
+  }
+
+  i = i + 1
+	optionsData[i] = {
+    type = "button",
+    name = "Reset Position",
+    func = function() Parent.Queue:ResetPosition() end,
+    tooltip = "Resets the Queue window position.",
+    width = "half",
+    disabled = function() return not Parent.SV.queueEnabled end,
+  }
 
   i = i + 1
   optionsData[i] = {

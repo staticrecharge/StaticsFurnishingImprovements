@@ -1,7 +1,7 @@
 --[[------------------------------------------------------------------------------------------------
 Title:					Static's Furnishing Improvements
 Author:					Static_Recharge
-Version:			  0.2.0
+Version:			  0.3.0
 Description:		Adds functionality to the in game furnishing menus and placement UI
 ------------------------------------------------------------------------------------------------]]--
 
@@ -31,7 +31,7 @@ Description:	Initializes all of the variables, object managers, slash commands a
 function StaticsFurnishingImprovements:Initialize()
 	-- Static definitions
   self.addonName = "StaticsFurnishingImprovements"
-	self.addonVersion = "0.2.0"
+	self.addonVersion = "0.3.0"
 	self.author = "|CFF0000Static_Recharge|r"
 	self.varsVersion = 1
 
@@ -43,6 +43,10 @@ function StaticsFurnishingImprovements:Initialize()
 		depositSameFromHouse = true,
 		depositCraftingStations = false,
 		showRetrieveToOnHUD = true,
+		queueEnabled = true,
+		queueTop = nil,
+		queueLeft = nil,
+		queueShowAfterAdd = true,
 	}
 
 	self.Dialogs = {
@@ -72,6 +76,7 @@ function StaticsFurnishingImprovements:Initialize()
 		housingEditorHUD = SM:GetScene("housingEditorHud"),
 		housingEditorHUDUI = SM:GetScene("housingEditorHudUI"),
 		furnitureVaultScene = SM:GetScene("furnitureVault"),
+		inventoryScene = SM:GetScene("inventory")
 	}
 	self.currentRetrieveTo = nil
 	self.retrieveToChanged = false
@@ -91,6 +96,7 @@ function StaticsFurnishingImprovements:Initialize()
 
 	-- Child Initialization
 	self.Settings = self.SETTINGS:New(self)
+	self.Queue = self.QUEUE:New(self)
 
 	-- Hooks
 	self:StowCraftingStationsHook()	
@@ -253,7 +259,7 @@ function StaticsFurnishingImprovements:DepositSameFromHouseDialog()
 
 	-- Show confirm dialog
 	if #self.found > 0 then
-		ZO_Dialogs_ShowDialog(self.addonName .. self.Dialogs.DEPOSIT_SAME, nil, {mainTextParams={#self.found}}, false)
+		ZO_Dialogs_ShowDialog(self.addonName .. "Deposit_Same_Confirm", nil, {mainTextParams={#self.found}}, false)
 	else
 		self.Chat:Msg("No matching furnishings found to move to the Furnishing Vault.")
 	end

@@ -1,10 +1,10 @@
 ## Title: |c0086B3Static's Furnishing Improvements|r
 ## Author: |cFF0000Static_Recharge|r
-## Version: 0.2.0
+## Version: 0.3.0
 ## AddOnVersion: 1
 ## APIVersion: 101048
 ## SavedVariables: StaticsFurnishingImprovementsWideVars
-## DependsOn: LibStatic>=1 LibAddonMenu-2.0>=41
+## DependsOn: LibStatic>=1 LibAddonMenu-2.0>=41 LibCustomMenu>=730
 ## Description: Adds functionality to the in game furnishing menus and placement UI
 ## IsLibrary: false
 
@@ -16,4 +16,6 @@
 
 StaticsFurnishingImprovements.lua
 Settings.lua
+Queue.lua
+StaticsFurnishingImprovements.xml
 Bindings.xml

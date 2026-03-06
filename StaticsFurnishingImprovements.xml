@@ -1,0 +1,77 @@
+<GuiXml>
+  <Controls>
+
+    <!-- Virtual Definitions -->
+
+    <!-- Button Template -->
+    <Button name="SFIButtonTemplate" font="ZoFontWinH3" horizontalAlignment="CENTER" verticalAlignment="CENTER" clickSound="Click" virtual="true">
+      <PressedOffset x="1" y="1" />
+      <FontColors normalColor="0086B3" mouseOverColor="FCD9B6" pressedColor="FCD9B6" />
+    </Button>
+
+    <!-- List Template -->
+    <Button name="SFIListTemplate" font="ZoFontChat" clickSound="Click" verticalAlignment="CENTER" horizontalAlignment="LEFT" virtual="true">
+      <Dimensions x="370" y="32" />
+      <Textures name="$(parent)Highlight" mouseOver="esoui/art/buttons/selection_highlight.dds" pressed="esoui/art/buttons/selection_highlight.dds" />
+      <PressedOffset x="1" y="1" />
+      <MouseButton button="2" enabled="true" />
+    </Button>
+
+    <!-- UI Definitions -->
+
+    <!-- Main Window -->
+    <TopLevelControl name="SFI_Panel" mouseEnabled="true" movable="true" clampedToScreen="true" hidden="true">
+      <Dimensions x="384" y ="384" />
+      <Anchor point="CENTER" relativeTo="GuiRoot" relativePoint="CENTER" offsetX="0" offsetY="0" />
+      <OnMoveStop> StaticsFurnishingImprovements.Queue:OnMoveStop() </OnMoveStop>
+      <Controls>
+
+        <!-- Main Backdrop -->
+        <Backdrop name="$(parent)BG" centerColor="CC050505" edgeColor="CC050505">
+          <AnchorFill />
+        </Backdrop>
+
+        <!-- Close Button -->
+        <Button name="$(parent)CloseButton" text="X" inherits="SFIButtonTemplate">
+          <Dimensions x="32" y="32" />
+          <Anchor point="TOPRIGHT" relativeTo="$(parent)" relativePoint="TOPRIGHT" offsetX="0" offsetY="0" />
+          <OnClicked> StaticsFurnishingImprovements.Queue:ShowPanel(false) </OnClicked>
+        </Button>
+
+        <!-- Title -->
+        <Label name="$(parent)Title" text="Furniture Vault Queue" font="ZoFontWinH3" color="0086B3" horizontalAlignment="CENTER" verticalAlignment="CENTER">
+          <Dimensions x="0" y="32" />
+          <Anchor point="TOP" relativeTo="$(parent)" relativePoint="TOP" offsetX="0" offsetY="0" />
+        </Label>
+
+        <!-- Info Tooltip -->
+        <Button name="$(parent)InfoButton" text="i" inherits="SFIButtonTemplate">
+          <Dimensions x="32" y="32" />
+          <Anchor point="TOPLEFT" relativeTo="$(parent)" relativePoint="TOPLEFT" offsetX="0" offsetY="0" />
+          <OnMouseEnter>
+            ZO_Tooltips_ShowTextTooltip(self, LEFT, "These items will be automatically added to the |c0086B3Furnishing Vault|r on the next visit.\n\n|c0086B3Right Click|r on an item to remove it from the queue.")
+          </OnMouseEnter>
+          <OnMouseExit>
+            ZO_Tooltips_HideTextTooltip()
+          </OnMouseExit>
+        </Button>
+
+        <!-- Scroll List -->
+        <Control name="$(parent)ScrollBox" inherits="ZO_ScrollContainer">
+          <Anchor point="TOPLEFT" relativeTo="$(parent)InfoButton" relativePoint="BOTTOMLEFT" offsetX="4" offsetY="4" />
+          <Anchor point="BOTTOMRIGHT" relativeTo="$(parent)" relativePoint="BOTTOMRIGHT" offsetX="-4" offsetY="-4" />
+          <OnInitialized> ZO_Scroll_Initialize(self) </OnInitialized>
+          <Controls>
+
+            <!-- Scroll List Backdrop-->
+            <Backdrop name="$(parent)BG" centerColor="CC222222" edgeColor="CC222222">
+              <AnchorFill />
+            </Backdrop>
+
+          </Controls>
+        </Control> 
+
+      </Controls>
+    </TopLevelControl>
+  </Controls>
+</GuiXml>
