@@ -6,7 +6,7 @@
     {
       "label": "copy",
       "type": "shell",
-      "command": "robocopy 'E:\\Documents\\Add-on Dev\\StaticsFurnishingImprovements' 'E:\\Documents\\Elder Scrolls Online\\live\\AddOns\\StaticsFurnishingImprovements' StaticsFurnishingImprovements.addon StaticsFurnishingImprovements.lua Settings.lua Queue.lua StaticsFurnishingImprovements.xml Bindings.xml changelog.readme",
+      "command": "robocopy 'E:\\Documents\\Add-on Dev\\StaticsFurnishingImprovements' 'E:\\Documents\\Elder Scrolls Online\\live\\AddOns\\StaticsFurnishingImprovements' StaticsFurnishingImprovements.addon StaticsFurnishingImprovements.lua Settings.lua Queue.lua VaultStats.lua StaticsFurnishingImprovements.xml Bindings.xml changelog.readme",
       "problemMatcher": [],
       "group": {
         "kind": "build",

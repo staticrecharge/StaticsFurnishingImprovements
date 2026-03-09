@@ -23,7 +23,7 @@ Settings    													            - Parent object containing all functions, t
 ├─ :Changed()               							- Fired when the player first loads in after a settings reset is forced.
 └─ :GetParent()                                   - Returns the parent object of this object for reference to parent variables.
 ------------------------------------------------------------------------------------------------]]--
-local Settings = ZO_InitializingObject:Subclass()
+local Settings = {}
 
 
 --[[------------------------------------------------------------------------------------------------
@@ -147,6 +147,7 @@ function Settings:CreateSettingsPanel()
     tooltip = "If disabled the Queue module will be unloaded.",
     width = "full",
 		default = Parent.Defaults.queueEnabled,
+		requiresReload = true,
 	}
 
   i = i + 1
@@ -165,7 +166,7 @@ function Settings:CreateSettingsPanel()
 	optionsData[i] = {
     type = "button",
     name = "Show Queue",
-    func = function() SM:ShowBaseScene() Parent.Queue:ShowPanel(true) end,
+    func = function() SM:ShowBaseScene() Parent.Queue:ShowWindow(true) end,
     width = "half",
     disabled = function() return not Parent.SV.queueEnabled end,
   }
@@ -178,6 +179,44 @@ function Settings:CreateSettingsPanel()
     tooltip = "Resets the Queue window position.",
     width = "half",
     disabled = function() return not Parent.SV.queueEnabled end,
+  }
+
+	i = i + 1
+  optionsData[i] = {
+		type = "header",
+		name = "Vault Stats |t100%:100%:esoui/art/buttons/info_up.dds|t",
+    tooltip = "Shows varioius statistics to help keep the |c0086B3Furnishing Vault|r organized and optimized.",
+	}
+
+  i = i + 1
+	optionsData[i] = {
+		type = "checkbox",
+    name = "Enabled",
+    getFunc = function() return Parent.SV.vaultStatsEnabled end,
+    setFunc = function(value) Parent.SV.vaultStatsEnabled = value end,
+    tooltip = "If disabled the Queue module will be unloaded.",
+    width = "full",
+		default = Parent.Defaults.vaultStatsEnabled,
+		requiresReload = true,
+	}
+
+	i = i + 1
+	optionsData[i] = {
+    type = "button",
+    name = "Show Vault Stats",
+    func = function() SM:ShowBaseScene() Parent.VaultStats:ShowWindow(true) end,
+    width = "half",
+    disabled = function() return not Parent.SV.vaultStatsEnabled end,
+  }
+
+	i = i + 1
+	optionsData[i] = {
+    type = "button",
+    name = "Reset Position",
+    func = function() Parent.VaultStats:ResetPosition() end,
+    tooltip = "Resets the Vault Stats window position.",
+    width = "half",
+    disabled = function() return not Parent.SV.vaultStatsEnabled end,
   }
 
   i = i + 1
@@ -264,7 +303,8 @@ function Settings:GetParent()
   return self.Parent
 end
 
+
 --[[------------------------------------------------------------------------------------------------
 Global template assignment
 ------------------------------------------------------------------------------------------------]]--
-StaticsFurnishingImprovements.SETTINGS = Settings
+StaticsFurnishingImprovements.Settings = Settings

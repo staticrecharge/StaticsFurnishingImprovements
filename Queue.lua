@@ -22,7 +22,7 @@ Queue    													            - Parent object containing all functions, tabl
 ├─ :Changed()               							- Fired when the player first loads in after a settings reset is forced.
 └─ :GetParent()                                   - Returns the parent object of this object for reference to parent variables.
 ------------------------------------------------------------------------------------------------]]--
-local Queue = ZO_InitializingObject:Subclass()
+local Queue = {}
 
 
 --[[------------------------------------------------------------------------------------------------
@@ -37,24 +37,23 @@ function Queue:Initialize(Parent)
   self.List = {}
 
   -- Controls
-  local p = GetControl("SFI_Panel")
+  local w = GetControl("SFI_Queue_Window")
   self.C = {
-    Panel = p,
-    CloseButton = p:GetNamedChild("CloseButton"),
-    ScrollBox = p:GetNamedChild("ScrollBox"),
+    Window = w,
+    CloseButton = GetControl(w, "CloseButton"),
+    ScrollBox = GetControl(w, "ScrollBox"),
   }
 
   -- Libraries
-  ZO_CreateStringId("SI_BINDING_NAME_ADD_VAULT_QUEUE", "Add to Vault Queue")
-  LCM:RegisterContextMenu(function(...) self:Add(...) end, category)
+  LCM:RegisterContextMenu(function(...) self:ContextMenu(...) end)
 
   -- Events and Callbacks
   self:DepositQueue()
 
   -- Slash Commands
-  SLASH_COMMANDS["/sfiqueue"] = function() self:ShowPanel() end
+  SLASH_COMMANDS["/sfiqueue"] = function() self:ShowWindow() end
 
-  self:RestorePanel()
+  self:RestoreWindow()
 
 	self.initialized = true
 end
@@ -81,26 +80,29 @@ function Queue:OnMoveStop()
   local Parent = self:GetParent()
   local sv = Parent.SV
   local c = self.C
-  sv.queueLeft = c.Panel:GetLeft()
-	sv.queueTop = c.Panel:GetTop()
+  sv.queueLeft = c.Window:GetLeft()
+	sv.queueTop = c.Window:GetTop()
 end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:RestorePanel()
+Queue:RestoreWindow()
 Inputs:				None
 Outputs:			None
 Description:	Restores the window position.
 ------------------------------------------------------------------------------------------------]]--
-function Queue:RestorePanel()
+function Queue:RestoreWindow()
   local Parent = self:GetParent()
   local sv = Parent.SV
   local c = self.C
   local left = sv.queueLeft
 	local top = sv.queueTop
 	if left ~= nil and top ~= nil then
-		c.Panel:ClearAnchors()
-		c.Panel:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, left, top)
+		c.Window:ClearAnchors()
+		c.Window:SetAnchor(TOPLEFT, GuiRoot, TOPLEFT, left, top)
+  else
+    c.Window:ClearAnchors()
+    c.Window:SetAnchor(CENTER, GuiRoot, CENTER)
 	end
 end
 
@@ -114,28 +116,27 @@ Description:	Resets the window position.
 function Queue:ResetPosition()
   local Parent = self:GetParent()
   local sv = Parent.SV
-  sv.left = nil
-  sv.top = nil
-  self:RestorePanel()
+  sv.queueLeft = nil
+  sv.queueTop = nil
+  self:RestoreWindow()
 end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:ShowPanel()
+Queue:ShowWindow()
 Inputs:				show                                - (optional) forces the window to a shown state if true
 Outputs:			None
 Description:	Shows/Hides or Toggles the window.
 ------------------------------------------------------------------------------------------------]]--
-function Queue:ShowPanel(show)
+function Queue:ShowWindow(show)
   local Parent = self:GetParent()
-  if not Parent.SV.queueEnabled then return end
   local c = self.C
   if show == nil then
-    c.Panel:SetHidden(not c.Panel:IsHidden())
+    c.Window:SetHidden(not c.Window:IsHidden())
   else
-    c.Panel:SetHidden(not show)
+    c.Window:SetHidden(not show)
   end
-  if c.Panel:IsHidden() then
+  if c.Window:IsHidden() then
     SM:SetInUIMode(false)
   else
     SM:SetInUIMode(true)
@@ -154,8 +155,8 @@ function Queue:UpdateScrollList()
 		v:SetHidden(true)
 	end
 	local parent = self.C.ScrollBox
-	local name = "SFIListEntry"
-	local template = "SFIListTemplate"
+	local name = "SFIQueueListEntry"
+	local template = "SFIQueueList"
 	for i,v in ipairs(self.List) do
 		local c = {}
 		if self.ListPool[i] then
@@ -196,7 +197,7 @@ Description:	Shows the tooltip for the indexed item.
 ------------------------------------------------------------------------------------------------]]--
 function Queue:ShowTooltip(index)
 	local itemLink = self.List[index].link
-	InitializeTooltip(ItemTooltip, self.C.Panel, RIGHT, -5, 0, LEFT)
+	InitializeTooltip(ItemTooltip, self.C.Window, RIGHT, -5, 0, LEFT)
 	ItemTooltip:SetLink(itemLink)
 end
 
@@ -213,37 +214,46 @@ end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:Add()
-Inputs:				inventorySlot                       - inventory slot information
+Queue:ContextMenu()
+Inputs:				rowControl                          - inventory slot information
               slotActions                         - slot actions to add to
+Outputs:			None
+Description:	Adds the context menu entry.
+------------------------------------------------------------------------------------------------]]--
+function Queue:ContextMenu(rowControl, slotActions)
+  local Parent = self:GetParent()
+	local bagId = rowControl.bagId
+	local index = rowControl.slotIndex
+	local itemType = GetItemType(bagId, index)
+  local link = GetItemLink(bagId, index)
+  local scene = SM:GetCurrentScene()
+  if itemType ~= ITEMTYPE_FURNISHING or scene ~= Parent.Scenes.inventoryScene then return end
+  AddCustomMenuItem("Add to Vault Queue" , function() self:Add(link) end, MENU_ADD_OPTION_LABEL)
+  --ShowMenu(rowControl)
+end
+
+
+--[[------------------------------------------------------------------------------------------------
+Queue:Add()
+Inputs:				link                                - item to add to the Queue
 Outputs:			None
 Description:	Adds the furniture item to the Queue from the context menu. Only works from inventory scene.
 ------------------------------------------------------------------------------------------------]]--
-function Queue:Add(inventorySlot, slotActions)
+function Queue:Add(link)
   local Parent = self:GetParent()
-  if not Parent.SV.queueEnabled then return end
-  local valid = ZO_Inventory_GetBagAndIndex(inventorySlot)
-  if not valid then return end
-  local bagId, slotIndex = ZO_Inventory_GetBagAndIndex(inventorySlot)
-  local itemType = GetItemType(bagId, slotIndex)
-  local id = GetItemId(bagId, slotIndex)
-  local scene = SM:GetCurrentScene()
-  if itemType ~= ITEMTYPE_FURNISHING or scene ~= Parent.Scenes.inventoryScene then return end
-  slotActions:AddCustomSlotAction(SI_BINDING_NAME_ADD_VAULT_QUEUE, function()
-    local icon= GetItemInfo(bagId, slotIndex)
-    local link = GetItemLink(bagId, slotIndex)
-    local data = {
-      icon = icon,
-      link = link,
-      id = id,
-    }
-    table.insert(self.List, data)
-    Parent.Chat:Msg(zo_strformat("<<1>> added to the Vault Queue."))
-    self:UpdateScrollList()
-    if Parent.SV.queueShowAfterAdd then
-      self:ShowPanel(true)
-    end
-  end, "")
+  local id = GetItemLinkItemId(link)
+  local icon = GetItemLinkInfo(link)
+  local data = {
+    link = link,
+    icon = icon,
+    id = id,
+  }
+	table.insert(self.List, data)
+  Parent.Chat:Msg(zo_strformat("<<1>> added to the Vault Queue.", link))
+  self:UpdateScrollList()
+  if Parent.SV.queueShowAfterAdd then
+    self:ShowWindow(true)
+  end
 end
 
 
@@ -256,7 +266,6 @@ Description:	Automatically deposits the Queue into the furnishing vault.
 function Queue:DepositQueue()
   local Parent = self:GetParent()
 	Parent.Scenes.furnitureVaultScene:RegisterCallback("StateChange", function(oldState, newState)
-    if not Parent.SV.queueEnabled then return end
 		if newState == SCENE_SHOWING and #self.List > 0 then
 			local backpackCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BACKPACK)
       while #self.List > 0 do
@@ -296,32 +305,6 @@ end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:Update()
-Inputs:				None
-Outputs:			None
-Description:	Updates the settings panel in LibAddonMenu.
-------------------------------------------------------------------------------------------------]]--
-function Queue:Update()
-	local Parent = self:GetParent()
-	if not Parent.LAMReady then return end
-end
-
-
---[[------------------------------------------------------------------------------------------------
-Queue:Changed()
-Inputs:				None
-Outputs:			None
-Description:	Sends a message the the settings have been reset.
-------------------------------------------------------------------------------------------------]]--
-function Queue:Changed()
-	local Parent = self:GetParent()
-	if not Parent.SV.settingsChanged then return end
-	Parent.SV.settingsChanged = false
-	Parent.Chat:Msg("Settings have been reset, please ensure they are to your preference.")
-end
-
-
---[[------------------------------------------------------------------------------------------------
 Queue:GetParent()
 Inputs:				None
 Outputs:			Parent          										- The parent object of this object.
@@ -331,7 +314,8 @@ function Queue:GetParent()
   return self.Parent
 end
 
+
 --[[------------------------------------------------------------------------------------------------
 Global template assignment
 ------------------------------------------------------------------------------------------------]]--
-StaticsFurnishingImprovements.QUEUE = Queue
+StaticsFurnishingImprovements.Queue = Queue

@@ -1,3 +1,8 @@
+0.3.0
+  - Added a queue feature for adding items to the furniture vault
+  - Added the vault stats module
+  - Both the queue and vault stats modules can be completely unloaded in settings
+
 0.2.0
   - Made the retrieveto menu show up during more editor scenes
   - Added a function with keybind/slashcommand to store same items from house to furnishing vault

@@ -8,8 +8,11 @@ HousingEditorGetSelectedFurnitureId()
 /script d(GetFurnitureDataInfo(GetItemLinkFurnitureDataId(GetPlacedFurnitureLink(HousingEditorGetSelectedFurnitureId()))))
 /script d(GetFurnitureCategoryName(104))
 
-
+/script d(GetItemLinkItemId(GetPlacedFurnitureLink(HousingEditorGetSelectedFurnitureId())))
 
 
 
 CreateNewTabFilterData(filterType, inventoryType, filterString, normal, pressed, highlight, hiddenColumns, hideTab, isSubFilter)
+
+
+make Queue save during reload

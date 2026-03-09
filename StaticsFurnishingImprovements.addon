@@ -4,7 +4,7 @@
 ## AddOnVersion: 1
 ## APIVersion: 101048
 ## SavedVariables: StaticsFurnishingImprovementsWideVars
-## DependsOn: LibStatic>=1 LibAddonMenu-2.0>=41 LibCustomMenu>=730
+## DependsOn: LibStatic>=2 LibAddonMenu-2.0>=41 LibCustomMenu>=730
 ## Description: Adds functionality to the in game furnishing menus and placement UI
 ## IsLibrary: false
 
@@ -17,5 +17,6 @@
 StaticsFurnishingImprovements.lua
 Settings.lua
 Queue.lua
+VaultStats.lua
 StaticsFurnishingImprovements.xml
 Bindings.xml

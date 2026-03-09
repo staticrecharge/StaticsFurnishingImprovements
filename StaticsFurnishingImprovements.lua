@@ -47,6 +47,10 @@ function StaticsFurnishingImprovements:Initialize()
 		queueTop = nil,
 		queueLeft = nil,
 		queueShowAfterAdd = true,
+		vaultStatsEnabled = true,
+		vaultStatsTop = nil,
+		vaultStatsLeft = nil,
+		Data = {},
 	}
 
 	self.Dialogs = {
@@ -70,6 +74,13 @@ function StaticsFurnishingImprovements:Initialize()
 			}
 		},
 	}
+
+	self.MasterStations = {
+		[203555] = true, 					-- Grand Master Blacksmithing Station
+		[203553] = true, 					-- Grand Master Clothing Station
+		[203556] = true, 					-- Grand Master Jewleryaw Crafting Station
+		[203554] = true, 					-- Grand Master Woodworking Station
+	}
 	
 	-- Session Variables
 	self.Scenes = {
@@ -78,8 +89,6 @@ function StaticsFurnishingImprovements:Initialize()
 		furnitureVaultScene = SM:GetScene("furnitureVault"),
 		inventoryScene = SM:GetScene("inventory")
 	}
-	self.currentRetrieveTo = nil
-	self.retrieveToChanged = false
 
 	-- Saved Variables Initialization
 	self.SV = ZO_SavedVars:NewAccountWide("StaticsFurnishingImprovementsWideVars", self.varsVersion, nil, self.Defaults, GetWorldName())
@@ -94,9 +103,18 @@ function StaticsFurnishingImprovements:Initialize()
 	}
 	self.Chat = LibStatic.CHAT:New(Options)
 
-	-- Child Initialization
-	self.Settings = self.SETTINGS:New(self)
-	self.Queue = self.QUEUE:New(self)
+	-- Module Initialization
+	self.Settings:Initialize(self)
+	if self.SV.queueEnabled then
+		self.Queue:Initialize(self)
+	else
+		self.Queue = nil
+	end
+	if self.SV.vaultStatsEnabled then
+		self.VaultStats:Initialize(self)
+	else
+		self.VaultStats = nil
+	end
 
 	-- Hooks
 	self:StowCraftingStationsHook()	
@@ -105,9 +123,9 @@ function StaticsFurnishingImprovements:Initialize()
   EM:RegisterForEvent(self.addonName, EVENT_PLAYER_ACTIVATED, function(_, ...) self:OnPlayerActivated(...) end)
 
 	-- Slash Commands
-	SLASH_COMMANDS["/sfidepositsamefromhouse"] = function() self:DepositSameFromHouseDialog() end
+	SLASH_COMMANDS["/sfisamehouse"] = function() self:DepositSameFromHouseDialog() end
 
-	-- Hotkey Associations
+	-- Keybinds
 	self:AddDepostSameKeybindButton()
 	ZO_CreateStringId("SI_BINDING_NAME_SFI_Deposit_Same_From_House", "Deposit Same From House")
 
@@ -147,34 +165,43 @@ Outputs:			None
 Description:	Automatically stores crafting stations in the furnishing vault when picking them up from a house.
 ------------------------------------------------------------------------------------------------]]--
 function StaticsFurnishingImprovements:StowCraftingStationsHook()
-	local function preHookRetrieve()
+	local function preHookRetrieve(data)
 		if not self.SV.depositCraftingStations then return end
 
-		local link = GetItemLinkFurnitureDataId(GetPlacedFurnitureLink(HousingEditorGetSelectedFurnitureId()))
-		local _, subCategory = GetFurnitureDataInfo(link)
-		self.Chat:Debug(zo_strformat("link: <<1>>, subCategory: <<2>>", link, subCategory))
+		self.currentRetrieveTo = HousingEditorGetRetrieveToBag()
+		if self.currentRetrieveTo == BAG_FURNITURE_VAULT then return end
+
+		local furnitureLink
+		if data then
+			furnitureLink = data.retrievableFurnitureId
+		else
+			furnitureLink = GetPlacedFurnitureLink(HousingEditorGetSelectedFurnitureId())
+		end
+		local itemId = GetItemLinkItemId(furnitureLink)
+		local _, subCategory = GetFurnitureDataInfo(GetItemLinkFurnitureDataId(furnitureLink))
+		self.Chat:Debug(zo_strformat("link: <<1>>, subCategory: <<2>>", furnitureLink, subCategory))
+
 		if subCategory == CRAFTING_STATIONS then
-			self.currentRetrieveTo = HousingEditorGetRetrieveToBag()
-			self.Chat:Msg(zo_strformat("<<1>> sent to the Furnishing Vault automatically.", link))
-			if self.currentRetrieveTo ~= BAG_FURNITURE_VAULT then
+			if not self.MasterStations[itemId] then
 				HousingEditorSetRetrieveToBag(BAG_FURNITURE_VAULT)
-				self.retrieveToChanged = true
+				self.Chat:Msg(zo_strformat("<<1>> sent to the Furnishing Vault.", furnitureLink))
+			else
+				HousingEditorSetRetrieveToBag(self.currentRetrieveTo)
+				self.Chat:Msg(zo_strformat("<<1>> can't be sent to the Furnishing Vault. Sending to previously selected bag.", furnitureLink))
 			end
 		end
 	end
 
 	local function postHookRetrieve()
-		if not self.SV.depositCraftingStations then return end
-
-		if self.retrieveToChanged then
+		if self.currentRetrieveTo then
 			HousingEditorSetRetrieveToBag(self.currentRetrieveTo)
-			self.retrieveToChanged = false
+			self.currentRetrieveTo = nil
 		end
 	end
 
 	ZO_PreHook("HousingEditorRequestRemoveSelectedFurniture", preHookRetrieve)
 	ZO_PostHook("HousingEditorRequestRemoveSelectedFurniture", postHookRetrieve)
-	ZO_PreHook("HousingEditorRequestRemoveFurniture", preHookRetrieve)
+	ZO_PreHook("HousingEditorRequestRemoveFurniture", preHookRetrieve)	
 	ZO_PostHook("HousingEditorRequestRemoveFurniture", postHookRetrieve)
 end
 
@@ -274,14 +301,14 @@ Description:	Moves furniture from the house to the furnishing vault.
 ------------------------------------------------------------------------------------------------]]--
 function StaticsFurnishingImprovements:DepositSameFromHouse()
   -- If dialog passed then remove the furniture to the furnishing vault
-	self.currentRetrieveTo = HousingEditorGetRetrieveToBag()
+	local currentRetrieveTo = HousingEditorGetRetrieveToBag()
 	HousingEditorSetRetrieveToBag(BAG_FURNITURE_VAULT)
 	for index, data in ipairs(self.found) do
 		HousingEditorRequestRemoveFurniture(data.id)
 		self.Chat:Msg(zo_strformat("<<1>> moved to furnishing vault from house.", data.link))
 	end
 	self.Chat:Msg(zo_strformat("<<1>> items moved to furnishing vault from house.", #self.found))
-	HousingEditorSetRetrieveToBag(self.currentRetrieveTo)
+	HousingEditorSetRetrieveToBag(currentRetrieveTo)
 end
 
 
