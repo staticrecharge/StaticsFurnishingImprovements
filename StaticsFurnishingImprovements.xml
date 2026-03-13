@@ -685,7 +685,7 @@
               <Dimensions x="120" y="32" />
               <Anchor point="TOP" relativeTo="$(parent)Label" relativePoint="BOTTOM" offsetX="0" offsetY="2" />
               <OnClicked>
-                StaticsFurnishingImprovements.VaultStats:RemoveItemsFromBoundUnboundPairsList(true)
+                StaticsFurnishingImprovements.VaultStats:RemoveItemsFromPairsList(true)
               </OnClicked>
               <OnMouseEnter>
                 ZO_Tooltips_ShowTextTooltip(self, TOP, "Remove all doubled up bound items from the |c0086B3Furnishing Vault|r")
@@ -699,7 +699,7 @@
               <Dimensions x="120" y="32" />
               <Anchor point="TOPRIGHT" relativeTo="$(parent)Label" relativePoint="BOTTOMRIGHT" offsetX="0" offsetY="2" />
               <OnClicked>
-                StaticsFurnishingImprovements.VaultStats:RemoveItemsFromBoundUnboundPairsList(false)
+                StaticsFurnishingImprovements.VaultStats:RemoveItemsFromPairsList(false)
               </OnClicked>
               <OnMouseEnter>
                 ZO_Tooltips_ShowTextTooltip(self, TOP, "Remove all doubled up unbound items from the |c0086B3Furnishing Vault|r")

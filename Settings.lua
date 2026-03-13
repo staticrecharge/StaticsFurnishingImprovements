@@ -15,7 +15,7 @@ local EM = EVENT_MANAGER
 
 
 --[[------------------------------------------------------------------------------------------------
-Settings Class Initialization
+Settings Object Initialization
 Settings    													            - Parent object containing all functions, tables, variables, constants and other data managers.
 ├─ :IsInitialized()                               - Returns true if the object has been successfully initialized.
 ├─ :CreateSettingsPanel()													- Creates and registers the settings panel with LibAddonMenu.

@@ -12,15 +12,29 @@ local WM = WINDOW_MANAGER
 local SM = SCENE_MANAGER
 local LCM = LibCustomMenu
 local EM = EVENT_MANAGER
+local SI = SHARED_INVENTORY
 
 
 --[[------------------------------------------------------------------------------------------------
 VaultStats Class Initialization
-VaultStats    													            - Parent object containing all functions, tables, variables, constants and other data managers.
+VaultStats    													          - Parent object containing all functions, tables, variables, constants and other data managers.
 ├─ :IsInitialized()                               - Returns true if the object has been successfully initialized.
-├─ :CreateSettingsPanel()													- Creates and registers the settings panel with LibAddonMenu.
-├─ :Update()                											- Updates the settings panel in LibAddonMenu.
-├─ :Changed()               							- Fired when the player first loads in after a settings reset is forced.
+├─ :OnMoveStop()                                  - Stores the new window position.
+├─ :RestoreWindow()                               - Restores the window position.
+├─ :ResetPosition()                               - Resets the window position.
+├─ :ShowWindow()                                  - Shows/Hides or Toggles the window.
+├─ :UpdateStorageData()                           - Updates the vault data.
+├─ :UpdateStorageBar()                            - Updates the visual storage bar.
+├─ :UpdateLegendBar()                             - Updates the legend bar.
+├─ :UpdateSinglesScrollList()                     - Updates the singles list.
+├─ :UpdatePairsScrollList()                       - Updates the pairs list.
+├─ :RemoveItemsFromSinglesList()                  - Removes all of the items in the singles list from the furnishing vault.
+├─ :RemoveItemsFromPairsList(bound)               - Removes all of the items in the pairs list from the furnishing vault.
+├─ :ShowTooltip(category)                         - Shows the tooltip for the category item.
+├─ :HideTooltip()                                 - Hides the category tooltip.
+├─ :ShowItemTooltip(link)                         - Shows the tooltip for the indexed item.
+├─ :HideItemTooltip()                             - Hides the item tooltip.
+├─ :AddVaultStatsKeybindButton()                  - Adds the vault stats keybind to the furniture vault scene.
 └─ :GetParent()                                   - Returns the parent object of this object for reference to parent variables.
 ------------------------------------------------------------------------------------------------]]--
 local VaultStats = {}
@@ -34,7 +48,7 @@ Description:	Initializes all of the variables and tables.
 ------------------------------------------------------------------------------------------------]]--
 function VaultStats:Initialize(Parent)
   self.Parent = Parent
-  self.Categories = LibStatic.PAIREDLIST:New(
+  self.Categories = LibStatic:PairedListNew(
     {"Services", "Conservatory", "Courtyard", "Dining", "Gallery", "Hearth", "Library", "Lighting", "Parlor", "Structures", "Suite", "Undercroft", "Workshop"},
     {25, 12, 6, 5, 9, 8, 4, 11, 3, 13, 2, 7, 10}
   )
@@ -192,11 +206,11 @@ Description:	Updates the vault data.
 function VaultStats:UpdateStorageData()
   local Parent = self:GetParent()
   if IsOwnerOfCurrentHouse() then
-    local FurnitureCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_FURNITURE_VAULT)
+    local FurnitureCache = SI:GetOrCreateBagCache(BAG_FURNITURE_VAULT)
     local vaultMax = GetBagSize(BAG_FURNITURE_VAULT)
     local Categories = self.Categories:GetChoices()
     Parent.SV.Data = {}
-    Parent.SV.Data.Singles = {}
+    Parent.SV.VaultData.Singles = {}
     Parent.SV.BoundUnboundPairs = {}
     local Bound = {}
     local Unbound = {}
@@ -228,7 +242,7 @@ function VaultStats:UpdateStorageData()
           name = furnitureData.name,
         }
       if stack == 1 then
-        table.insert(Parent.SV.Data.Singles, item)
+        table.insert(Parent.SV.VaultData.Singles, item)
       end
 
       -- store bound/unbound data
@@ -247,7 +261,7 @@ function VaultStats:UpdateStorageData()
     end
 
     -- Sort tables by item name
-    LibStatic:Sort(Parent.SV.Data.Singles, nil, "name")
+    LibStatic:Sort(Parent.SV.VaultData.Singles, nil, "name")
     LibStatic:Sort(Bound, nil, "name")
 
     -- find bound/unbound matches
@@ -324,7 +338,7 @@ function VaultStats:UpdateSinglesScrollList()
 	local parent = self.C.Singles.ScrollBox
 	local name = "SFISinglesListEntry"
 	local template = "SFIVaultStatsSinglesList"
-	for i,v in ipairs(Parent.SV.Data.Singles) do
+	for i,v in ipairs(Parent.SV.VaultData.Singles) do
 		local c = {}
 		if self.SinglesListPool[i] then
 			c = self.SinglesListPool[i]
@@ -341,7 +355,7 @@ function VaultStats:UpdateSinglesScrollList()
 		c:SetHandler("OnMouseEnter", function(self_) self:ShowItemTooltip(v.link) end)
 		c:SetHandler("OnMouseExit", function(self_) self:HideItemTooltip() end)
 	end
-  self.C.Singles.Label:SetText(zo_strformat("Single Stack Items (<<1>>)", #Parent.SV.Data.Singles))
+  self.C.Singles.Label:SetText(zo_strformat("Single Stack Items (<<1>>)", #Parent.SV.VaultData.Singles))
 end
 
 
@@ -386,7 +400,7 @@ end
 VaultStats:RemoveItemsFromSinglesList()
 Inputs:				None
 Outputs:			None
-Description:	Removes all of the items in the list from the furnishing vault.
+Description:	Removes all of the items in the singles list from the furnishing vault.
 ------------------------------------------------------------------------------------------------]]--
 function VaultStats:RemoveItemsFromSinglesList()
   local Parent = self:GetParent()
@@ -398,7 +412,7 @@ function VaultStats:RemoveItemsFromSinglesList()
 
   local i = 1
   local bag = BAG_FURNITURE_VAULT
-  local list = Parent.SV.Data.Singles
+  local list = Parent.SV.VaultData.Singles
 
   local function tryTransfer()
     if not DoesBagHaveSpaceFor(BAG_BACKPACK, bag, list[i].slotIndex) then
@@ -444,12 +458,12 @@ end
 
 
 --[[------------------------------------------------------------------------------------------------
-VaultStats:RemoveItemsFromBoundUnboundPairsList(bound)
+VaultStats:RemoveItemsFromPairsList(bound)
 Inputs:				bound                               - if true will extract the bound items.
 Outputs:			None
-Description:	Removes all of the items in the list from the furnishing vault.
+Description:	Removes all of the items in the pairs list from the furnishing vault.
 ------------------------------------------------------------------------------------------------]]--
-function VaultStats:RemoveItemsFromBoundUnboundPairsList(bound)
+function VaultStats:RemoveItemsFromPairsList(bound)
   local Parent = self:GetParent()
 	local scene = SM:GetCurrentScene()
   if scene ~= Parent.Scenes.furnitureVaultScene then
@@ -514,7 +528,7 @@ end
 VaultStats:ShowTooltip(category)
 Inputs:				index                               - the category to show the info for.
 Outputs:			None
-Description:	Shows the tooltip for the indexed item.
+Description:	Shows the tooltip for the category item.
 ------------------------------------------------------------------------------------------------]]--
 function VaultStats:ShowTooltip(category)
   local Parent = self:GetParent()
@@ -563,7 +577,7 @@ end
 VaultStats:AddVaultStatsKeybindButton()
 Inputs:				None
 Outputs:			None
-Description:	Adds the Vault Stats keybinding to the strip.
+Description:	Adds the vault stats keybind to the furniture vault scene.
 ------------------------------------------------------------------------------------------------]]--
 function VaultStats:AddVaultStatsKeybindButton()
   local Parent = self:GetParent()

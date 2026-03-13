@@ -1,7 +1,7 @@
 --[[------------------------------------------------------------------------------------------------
 Title:					Static's Furnishing Improvements
 Author:					Static_Recharge
-Version:			  0.3.0
+Version:			  1.0.0
 Description:		Adds functionality to the in game furnishing menus and placement UI
 ------------------------------------------------------------------------------------------------]]--
 
@@ -15,8 +15,15 @@ local CRAFTING_STATIONS = 104
 
 
 --[[------------------------------------------------------------------------------------------------
-StaticsFurnishingImprovements Class Initialization
-StaticsFurnishingImprovements    - Parent object containing all functions, tables, variables, constants and other data managers.
+StaticsFurnishingImprovements Object Initialization
+StaticsFurnishingImprovements					            - Parent object containing all functions, tables, variables, constants and other data managers.
+├─ :IsInitialized()                               - Returns true if the object has been successfully initialized.
+├─ :OnPlayerActivated() 													- Shows or hides the retrieve to bag menu.
+├─ :StowCraftingStationsHook() 										- Automatically stores crafting stations in the furnishing vault when picking them up from a house.
+├─ :DepositSameFromInventory() 										- Deposits already existing stacks into the furnishing vault.
+├─ :DepositSameFromHouseDialog() 									- Starts the dialog to confirm moving furniture from the house to the furnishing vault.
+├─ :DepositSameFromHouse() 									 			- Moves furniture from the house to the furnishing vault.
+└─ :AddDepostSameKeybindButton()						 			- Adds the Deposit Same keybinding to the strip. 
 ------------------------------------------------------------------------------------------------]]--
 StaticsFurnishingImprovements = {}
 
@@ -31,26 +38,34 @@ Description:	Initializes all of the variables, object managers, slash commands a
 function StaticsFurnishingImprovements:Initialize()
 	-- Static definitions
   self.addonName = "StaticsFurnishingImprovements"
-	self.addonVersion = "0.3.0"
+	self.addonVersion = "1.0.0"
 	self.author = "|CFF0000Static_Recharge|r"
 	self.varsVersion = 1
 
 	self.Defaults = {
+		-- Misc
 		chatEnabled = true,
 		debugEnabled = false,
 		settingsChanged = true,
+
+		-- Deposit and Retrieve
 		depositSameFromInventory = true,
 		depositSameFromHouse = true,
 		depositCraftingStations = false,
 		showRetrieveToOnHUD = true,
+
+		-- Queue
 		queueEnabled = true,
 		queueTop = nil,
 		queueLeft = nil,
 		queueShowAfterAdd = true,
+		Queue = {},
+
+		-- Vault Stats
 		vaultStatsEnabled = true,
 		vaultStatsTop = nil,
 		vaultStatsLeft = nil,
-		Data = {},
+		VaultData = {},
 	}
 
 	self.Dialogs = {
@@ -101,7 +116,7 @@ function StaticsFurnishingImprovements:Initialize()
 		chatEnabled = self.SV.chatEnabled,
 		debugEnabled = self.SV.debugEnabled,
 	}
-	self.Chat = LibStatic.CHAT:New(Options)
+	self.Chat = LibStatic:ChatNew(Options)
 
 	-- Module Initialization
 	self.Settings:Initialize(self)
@@ -140,7 +155,7 @@ end
 StaticsFurnishingImprovements:OnPlayerActivated()
 Inputs:				None
 Outputs:			None
-Description:	Shows or hides the retrieve to menu
+Description:	Shows or hides the retrieve to bag menu.
 ------------------------------------------------------------------------------------------------]]--
 function StaticsFurnishingImprovements:OnPlayerActivated()
 	self.Chat:Debug("OnPlayerActivated started.")
@@ -210,7 +225,7 @@ end
 StaticsFurnishingImprovements:DepositSameFromInventory()
 Inputs:				None
 Outputs:			None
-Description:	Deposits already existing stacks into the furnishing vault
+Description:	Deposits already existing stacks into the furnishing vault.
 ------------------------------------------------------------------------------------------------]]--
 function StaticsFurnishingImprovements:DepositSameFromInventory()
 	if not self.SV.depositSameFromInventory then return end
@@ -295,20 +310,30 @@ end
 
 --[[------------------------------------------------------------------------------------------------
 StaticsFurnishingImprovements:DepositSameFromHouse()
-Inputs:				found 															- Table containing the furniture data to remove
+Inputs:				None
 Outputs:			None
 Description:	Moves furniture from the house to the furnishing vault.
 ------------------------------------------------------------------------------------------------]]--
 function StaticsFurnishingImprovements:DepositSameFromHouse()
   -- If dialog passed then remove the furniture to the furnishing vault
 	local currentRetrieveTo = HousingEditorGetRetrieveToBag()
+	local count = 0
+	local total = #self.found
 	HousingEditorSetRetrieveToBag(BAG_FURNITURE_VAULT)
 	for index, data in ipairs(self.found) do
-		HousingEditorRequestRemoveFurniture(data.id)
-		self.Chat:Msg(zo_strformat("<<1>> moved to furnishing vault from house.", data.link))
+		local result = HousingEditorRequestRemoveFurniture(data.id)
+		ZO_AlertEvent(EVENT_HOUSING_EDITOR_REQUEST_RESULT, result)
+    PlaySound(SOUNDS.DEFAULT_CLICK)
+		if result == HOUSING_REQUEST_RESULT_SUCCESS then
+			count = count + 1
+			self.Chat:Msg(zo_strformat("<<1>> moved to furnishing vault from house.", data.link))
+		end
 	end
-	self.Chat:Msg(zo_strformat("<<1>> items moved to furnishing vault from house.", #self.found))
+	self.Chat:Msg(zo_strformat("<<1>> items moved to furnishing vault from house.", count))
 	HousingEditorSetRetrieveToBag(currentRetrieveTo)
+	if count ~= total then
+		self.Chat:Msg(zo_strformat("<<1>> items were skipped.", total - count))
+	end
 end
 
 

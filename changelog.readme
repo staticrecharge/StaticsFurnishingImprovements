@@ -1,7 +1,12 @@
+1.0.0
+  - The Deposit Queue will save between UI reloads
+  - Deposit same from house now waits for remove furniture request result before proceeding to the next item
+
 0.3.0
   - Added a queue feature for adding items to the furniture vault
   - Added the vault stats module
   - Both the queue and vault stats modules can be completely unloaded in settings
+  - Updated for 49
 
 0.2.0
   - Made the retrieveto menu show up during more editor scenes

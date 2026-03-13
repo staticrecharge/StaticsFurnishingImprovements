@@ -11,15 +11,26 @@ Libraries and Aliases
 local WM = WINDOW_MANAGER
 local SM = SCENE_MANAGER
 local LCM = LibCustomMenu
+local EM = EVENT_MANAGER
+local SI = SHARED_INVENTORY
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue Class Initialization
-Queue    													            - Parent object containing all functions, tables, variables, constants and other data managers.
+Queue Object Initialization
+Queue    													                - Parent object containing all functions, tables, variables, constants and other data managers.
 ├─ :IsInitialized()                               - Returns true if the object has been successfully initialized.
-├─ :CreateSettingsPanel()													- Creates and registers the settings panel with LibAddonMenu.
-├─ :Update()                											- Updates the settings panel in LibAddonMenu.
-├─ :Changed()               							- Fired when the player first loads in after a settings reset is forced.
+├─ :OnMoveStop()                                  - Stores the new window position.
+├─ :RestoreWindow()                               - Restores the window position.
+├─ :ResetPosition()                               - Resets the window position.
+├─ :ShowWindow()                                  - Shows/Hides or Toggles the window.
+├─ :UpdateScrollList()                            - Updates the Queue list.
+├─ :Remove(index)                                 - Removes the indexed item from the list.
+├─ :ShowTooltip(index)                            - Shows the tooltip for the indexed item.
+├─ :HideTooltip()                                 - Hides the tooltip.
+├─ :ContextMenu(rowControl, slotActions)          - Adds the context menu entry.
+├─ :Add()                                         - Adds the furniture item to the Queue from the context menu. Only works from inventory scene.
+├─ :DepositQueue()                                - Automatically deposits the Queue into the furnishing vault.
+├─ :OnPlayerActivated(initial)                    - If first load clears the Queue.
 └─ :GetParent()                                   - Returns the parent object of this object for reference to parent variables.
 ------------------------------------------------------------------------------------------------]]--
 local Queue = {}
@@ -33,8 +44,8 @@ Description:	Initializes all of the variables and tables.
 ------------------------------------------------------------------------------------------------]]--
 function Queue:Initialize(Parent)
   self.Parent = Parent
+  self.eventSpace = "SFIQueue"
   self.ListPool = {}
-  self.List = {}
 
   -- Controls
   local w = GetControl("SFI_Queue_Window")
@@ -49,6 +60,7 @@ function Queue:Initialize(Parent)
 
   -- Events and Callbacks
   self:DepositQueue()
+  EM:RegisterForEvent(self.eventSpace, EVENT_PLAYER_ACTIVATED, function(_, ...) self:OnPlayerActivated(...) end)
 
   -- Slash Commands
   SLASH_COMMANDS["/sfiqueue"] = function() self:ShowWindow() end
@@ -124,7 +136,7 @@ end
 
 --[[------------------------------------------------------------------------------------------------
 Queue:ShowWindow()
-Inputs:				show                                - (optional) forces the window to a shown state if true
+Inputs:				show                                - (optional) forces the window to show if true.
 Outputs:			None
 Description:	Shows/Hides or Toggles the window.
 ------------------------------------------------------------------------------------------------]]--
@@ -139,6 +151,7 @@ function Queue:ShowWindow(show)
   if c.Window:IsHidden() then
     SM:SetInUIMode(false)
   else
+    self:UpdateScrollList()
     SM:SetInUIMode(true)
   end
 end
@@ -150,14 +163,15 @@ Inputs:				None
 Outputs:			None
 Description:	Updates the Queue list.
 ------------------------------------------------------------------------------------------------]]--
-function Queue:UpdateScrollList()	
+function Queue:UpdateScrollList()
+  local Parent = self:GetParent()
 	for i,v in pairs(self.ListPool) do
 		v:SetHidden(true)
 	end
 	local parent = self.C.ScrollBox
 	local name = "SFIQueueListEntry"
 	local template = "SFIQueueList"
-	for i,v in ipairs(self.List) do
+	for i,v in ipairs(Parent.SV.Queue) do
 		local c = {}
 		if self.ListPool[i] then
 			c = self.ListPool[i]
@@ -178,25 +192,27 @@ end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:Remove()
+Queue:Remove(index)
 Inputs:				index                               - the index of the item to remove from the Queue
 Outputs:			None
 Description:	Removes the indexed item from the list.
 ------------------------------------------------------------------------------------------------]]--
 function Queue:Remove(index)
-	table.remove(self.List, index)
+  local Parent = self:GetParent()
+	table.remove(Parent.SV.Queue, index)
 	self:UpdateScrollList()
 end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:ShowTooltip()
+Queue:ShowTooltip(index)
 Inputs:				index                               - the index of the item to show
 Outputs:			None
 Description:	Shows the tooltip for the indexed item.
 ------------------------------------------------------------------------------------------------]]--
 function Queue:ShowTooltip(index)
-	local itemLink = self.List[index].link
+  local Parent = self:GetParent()
+	local itemLink = Parent.SV.Queue[index].link
 	InitializeTooltip(ItemTooltip, self.C.Window, RIGHT, -5, 0, LEFT)
 	ItemTooltip:SetLink(itemLink)
 end
@@ -214,7 +230,7 @@ end
 
 
 --[[------------------------------------------------------------------------------------------------
-Queue:ContextMenu()
+Queue:ContextMenu(rowControl, slotActions)
 Inputs:				rowControl                          - inventory slot information
               slotActions                         - slot actions to add to
 Outputs:			None
@@ -248,7 +264,7 @@ function Queue:Add(link)
     icon = icon,
     id = id,
   }
-	table.insert(self.List, data)
+	table.insert(Parent.SV.Queue, data)
   Parent.Chat:Msg(zo_strformat("<<1>> added to the Vault Queue.", link))
   self:UpdateScrollList()
   if Parent.SV.queueShowAfterAdd then
@@ -266,12 +282,12 @@ Description:	Automatically deposits the Queue into the furnishing vault.
 function Queue:DepositQueue()
   local Parent = self:GetParent()
 	Parent.Scenes.furnitureVaultScene:RegisterCallback("StateChange", function(oldState, newState)
-		if newState == SCENE_SHOWING and #self.List > 0 then
-			local backpackCache = SHARED_INVENTORY:GetOrCreateBagCache(BAG_BACKPACK)
-      while #self.List > 0 do
+		if newState == SCENE_SHOWING and #Parent.SV.Queue > 0 then
+			local backpackCache = SI:GetOrCreateBagCache(BAG_BACKPACK)
+      while #Parent.SV.Queue > 0 do
         local found = false
-        local qID = self.List[1].id
-        local qLink = self.List[1].link
+        local qID = Parent.SV.Queue[1].id
+        local qLink = Parent.SV.Queue[1].link
         for backpackIndex, backpackData in pairs(backpackCache) do
           local backpackID = GetItemId(BAG_BACKPACK, backpackIndex)
           local link = GetItemLink(BAG_BACKPACK, backpackIndex)
@@ -295,12 +311,27 @@ function Queue:DepositQueue()
         if not found then
           Parent.Chat:Msg(zo_strformat("<<1>>not found in inventory.", link))
         end
-        table.remove(self.List, 1)
+        table.remove(Parent.SV.Queue, 1)
       end
       Parent.Chat:Msg("Item transfers from Queue finished.")
       self:UpdateScrollList()
 		end
 	end)
+end
+
+
+--[[------------------------------------------------------------------------------------------------
+Queue:OnPlayerActivated(initial)
+Inputs:				initial                             - true if this is the first load from login
+Outputs:			None
+Description:	If first load clears the Queue.
+------------------------------------------------------------------------------------------------]]--
+function Queue:OnPlayerActivated(initial)
+  local Parent = self:GetParent()
+  if initial then
+    Parent.SV.Queue = {}
+  end
+  EM:UnregisterForEvent(self.eventSpace, EVENT_PLAYER_ACTIVATED)
 end
 
 
