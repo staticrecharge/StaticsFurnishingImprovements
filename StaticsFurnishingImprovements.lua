@@ -1,7 +1,7 @@
 --[[------------------------------------------------------------------------------------------------
 Title:					Static's Furnishing Improvements
 Author:					Static_Recharge
-Version:			  1.0.0
+Version:			  1.0.2
 Description:		Adds functionality to the in game furnishing menus and placement UI
 ------------------------------------------------------------------------------------------------]]--
 
@@ -38,7 +38,7 @@ Description:	Initializes all of the variables, object managers, slash commands a
 function StaticsFurnishingImprovements:Initialize()
 	-- Static definitions
   self.addonName = "StaticsFurnishingImprovements"
-	self.addonVersion = "1.0.0"
+	self.addonVersion = "1.0.2"
 	self.author = "|CFF0000Static_Recharge|r"
 	self.varsVersion = 1
 

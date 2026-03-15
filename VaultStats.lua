@@ -93,7 +93,7 @@ function VaultStats:Initialize(Parent)
   EM:RegisterForEvent(self.eventSpace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, function(...) self:UpdateStorageData() end)
 	EM:AddFilterForEvent(self.eventSpace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_BAG_ID, BAG_FURNITURE_VAULT)
 	EM:AddFilterForEvent(self.eventSpace, EVENT_INVENTORY_SINGLE_SLOT_UPDATE, REGISTER_FILTER_INVENTORY_UPDATE_REASON, INVENTORY_UPDATE_REASON_DEFAULT)
-  EM:RegisterForEvent(self.eventSpace, EVENT_PLAYER_ACTIVATED, function(_, ...) if IsOwnerOfCurrentHouse() then self:UpdateStorageData() end end)
+  EM:RegisterForEvent(self.eventSpace, EVENT_PLAYER_ACTIVATED, function(_, ...) self:OnPlayerActivated(initial) end)
 
   -- Slash Commands
   SLASH_COMMANDS["/sfivaultstats"] = function() self:ShowWindow() end
@@ -224,40 +224,43 @@ function VaultStats:UpdateStorageData()
     end
 
     for furnitureIndex, furnitureData in pairs(FurnitureCache) do
-      -- store category data
-      local furnitureLink = GetItemLink(BAG_FURNITURE_VAULT, furnitureIndex)
-      local categoryId = GetFurnitureDataInfo(GetItemLinkFurnitureDataId(furnitureLink))
-      local category = self.Categories:GetChoiceByValue(categoryId)
-      Parent.SV.Data[category].total = Parent.SV.Data[category].total + 1
+      if HasItemInSlot(BAG_FURNITURE_VAULT, furnitureIndex) then
+        -- store category data
+        local furnitureLink = GetItemLink(BAG_FURNITURE_VAULT, furnitureIndex)
+        local categoryId = GetFurnitureDataInfo(GetItemLinkFurnitureDataId(furnitureLink))
+        local category = self.Categories:GetChoiceByValue(categoryId)
+        Parent.Chat:Debug(zo_strformat("furnitureLink: <<1>>, categoryId: <<2>>, category: <<3>>, furnitureIndex: <<4>>", furnitureLink, categoryId, category, furnitureIndex))
+        Parent.SV.Data[category].total = Parent.SV.Data[category].total + 1
 
-      -- store single stack data
-      local icon, stack = GetItemInfo(BAG_FURNITURE_VAULT, furnitureIndex)
-      local id = GetItemId(BAG_FURNITURE_VAULT, furnitureIndex)
-      local item = {
-          link = furnitureLink,
-          icon = icon,
-          id = id,
-          stack = stack,
-          slotIndex = furnitureIndex,
-          name = furnitureData.name,
-        }
-      if stack == 1 then
-        table.insert(Parent.SV.VaultData.Singles, item)
+        -- store single stack data
+        --local icon, stack = GetItemInfo(BAG_FURNITURE_VAULT, furnitureIndex)
+        local id = GetItemId(BAG_FURNITURE_VAULT, furnitureIndex)
+        local item = {
+            link = furnitureLink,
+            icon = furnitureData.iconFile,
+            id = id,
+            stack = furnitureData.stackCount,
+            slotIndex = furnitureIndex,
+            name = furnitureData.name,
+          }
+        if item.stack == 1 then
+          table.insert(Parent.SV.VaultData.Singles, item)
+        end
+
+        -- store bound/unbound data
+        local bound = IsItemBound(BAG_FURNITURE_VAULT, furnitureIndex)
+        if bound then
+          table.insert(Bound, item)
+        else
+          table.insert(Unbound, item)
+        end
       end
 
-      -- store bound/unbound data
-      local bound = IsItemBound(BAG_FURNITURE_VAULT, furnitureIndex)
-      if bound then
-        table.insert(Bound, item)
-      else
-        table.insert(Unbound, item)
+      -- add ratio and percent values
+      for index, category in pairs(Categories) do
+        Parent.SV.Data[category].ratio = Parent.SV.Data[category].total / vaultMax
+        Parent.SV.Data[category].percent = Parent.SV.Data[category].ratio * 100
       end
-    end
-
-    -- add ratio and percent values
-    for index, category in pairs(Categories) do
-      Parent.SV.Data[category].ratio = Parent.SV.Data[category].total / vaultMax
-      Parent.SV.Data[category].percent = Parent.SV.Data[category].ratio * 100
     end
 
     -- Sort tables by item name
@@ -273,6 +276,8 @@ function VaultStats:UpdateStorageData()
         end
       end
     end
+
+    Parent.Chat:Debug("Vault Data updated.")
   end
   if not ZO_IsTableEmpty(Parent.SV.Data) then
     self:UpdateStorageBar()
@@ -292,7 +297,10 @@ Description:	Updates the visual storage bar.
 function VaultStats:UpdateStorageBar()
   local Parent = self:GetParent()
   local vaultMax = GetBagSize(BAG_FURNITURE_VAULT) 
-  local vaultUsed = GetNumBagUsedSlots(BAG_FURNITURE_VAULT)
+  local vaultUsed = 0
+  for i, v in pairs(Parent.SV.Data) do
+    vaultUsed = vaultUsed + v.total
+  end
   local vaultPercent = math.floor((vaultUsed / vaultMax) * 100)
   
   self.C.StorageBar.Label:SetText(zo_strformat("<<1>>/<<2>> (<<3>>%)", vaultUsed, vaultMax, vaultPercent))
@@ -595,6 +603,17 @@ function VaultStats:AddVaultStatsKeybindButton()
 			KEYBIND_STRIP:RemoveKeybindButton(furnitureVaultLeftKeybindStrip)
 		end
 	end)
+end
+
+
+--[[------------------------------------------------------------------------------------------------
+VaultStats:OnPlayerActivated(initial)
+Inputs:				initial                             - true if first load after login
+Outputs:			None
+Description:	Updates the vault data when loading into a player owned house.
+------------------------------------------------------------------------------------------------]]--
+function VaultStats:OnPlayerActivated(initial)
+  self:UpdateStorageData()
 end
 
 

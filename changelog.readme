@@ -1,3 +1,9 @@
+1.0.2
+  - Fixed a UI error that would occur when items were removed from the furnishing vault and then Vault Stats tried to update
+
+1.0.1
+  - Fixed a bug where the used vault amount would not show up when outside your houses
+
 1.0.0
   - The Deposit Queue will save between UI reloads
   - Deposit same from house now waits for remove furniture request result before proceeding to the next item
