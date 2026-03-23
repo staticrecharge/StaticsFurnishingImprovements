@@ -1,3 +1,7 @@
+1.1.0
+  - Adjusted how the vault stats window is shown and hidden
+  - Added a setting to auto show the vault stats window at the vault
+
 1.0.2
   - Fixed a UI error that would occur when items were removed from the furnishing vault and then Vault Stats tried to update
 
